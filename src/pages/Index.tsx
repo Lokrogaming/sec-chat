@@ -1,14 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useAuth } from '@/hooks/useAuth';
+import AuthPage from './AuthPage';
+import ChatPage from './ChatPage';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center animate-fade-in">
+          <div className="h-12 w-12 mx-auto rounded-xl bg-primary/10 animate-pulse-glow flex items-center justify-center mb-3">
+            <span className="font-mono text-primary text-xl font-bold">C</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (!user) return <AuthPage />;
+  return <ChatPage />;
 };
 
 export default Index;
