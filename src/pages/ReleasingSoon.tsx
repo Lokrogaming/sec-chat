@@ -42,7 +42,7 @@ const ReleasingSoon = () => {
         </div>
         
         <p className="text-sm text-muted-foreground">
-          Release on February 1st, 2026
+          Release on August 1st, 2026
         </p>
 
         {/* Button */}
