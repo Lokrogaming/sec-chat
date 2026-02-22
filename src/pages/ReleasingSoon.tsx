@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 
 const ReleasingSoon = () => {
   // Target date: February 1st, 2026
-  const targetDate = new Date("2026-02-01T00:00:00");
+  const targetDate = new Date("2026-08-01T00:00:00");
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
