@@ -167,27 +167,14 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
       return;
     }
 
-    // Create new conversation
-    const { data: conv, error: convError } = await supabase
-      .from('conversations')
-      .insert({})
-      .select()
-      .single();
+    // Create new conversation with participants atomically
+    const { data: convId, error: convError } = await supabase
+      .rpc('create_conversation_with_participant', { other_user_id: contactUserId });
 
-    if (convError || !conv) { toast.error('Failed to create conversation'); return; }
-
-    // Add both participants
-    const { error: partError } = await supabase
-      .from('conversation_participants')
-      .insert([
-        { conversation_id: conv.id, user_id: user.id },
-        { conversation_id: conv.id, user_id: contactUserId },
-      ]);
-
-    if (partError) { toast.error('Failed to set up conversation'); return; }
+    if (convError || !convId) { toast.error('Failed to create conversation'); return; }
 
     const contact = contacts.find(c => c.contact_user_id === contactUserId);
-    onSelectConversation(conv.id, contact?.profile || { display_name: null, avatar_url: null, user_id: contactUserId });
+    onSelectConversation(convId, contact?.profile || { display_name: null, avatar_url: null, user_id: contactUserId });
     loadConversations();
   };
 
