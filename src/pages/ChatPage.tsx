@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePresence } from '@/hooks/usePresence';
 import ChatSidebar from '@/components/ChatSidebar';
 import ChatView from '@/components/ChatView';
 import ProfilePage from '@/pages/ProfilePage';
@@ -7,6 +8,7 @@ import { Shield, Lock } from 'lucide-react';
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const { isOnline } = usePresence();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -25,6 +27,7 @@ export default function ChatPage() {
             onSelectConversation={handleSelectConversation}
             onOpenProfile={() => setShowProfile(true)}
             selectedConversationId={selectedConversation}
+            isOnline={isOnline}
           />
         </div>
         <div className="flex-1">
@@ -42,6 +45,7 @@ export default function ChatPage() {
           onSelectConversation={handleSelectConversation}
           onOpenProfile={() => setShowProfile(true)}
           selectedConversationId={selectedConversation}
+          isOnline={isOnline}
         />
       </div>
 
@@ -59,7 +63,7 @@ export default function ChatPage() {
               </button>
             </div>
             <div className="flex-1 min-h-0">
-              <ChatView conversationId={selectedConversation} otherUser={otherUser} />
+              <ChatView conversationId={selectedConversation} otherUser={otherUser} isOnline={otherUser ? isOnline(otherUser.user_id) : false} />
             </div>
           </>
         ) : (
