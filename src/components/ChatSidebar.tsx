@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole } from 'lucide-react';
 import { toast } from 'sonner';
+import PresenceDot from '@/components/PresenceDot';
 import {
   Dialog,
   DialogContent,
@@ -37,9 +38,10 @@ interface SidebarProps {
   onSelectConversation: (id: string, otherUser: any) => void;
   onOpenProfile: () => void;
   selectedConversationId: string | null;
+  isOnline?: (userId: string) => boolean;
 }
 
-export default function ChatSidebar({ onSelectConversation, onOpenProfile, selectedConversationId }: SidebarProps) {
+export default function ChatSidebar({ onSelectConversation, onOpenProfile, selectedConversationId, isOnline }: SidebarProps) {
   const { user, signOut } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -268,12 +270,18 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
                 onClick={() => startConversation(c.contact_user_id)}
                 className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-secondary/50 transition-colors min-w-[60px]"
               >
-                <Avatar className="h-10 w-10 border border-primary/20">
-                  <AvatarImage src={c.profile.avatar_url || undefined} />
-                  <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-xs">
-                    {c.profile.display_name?.[0]?.toUpperCase() || '?'}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-10 w-10 border border-primary/20">
+                    <AvatarImage src={c.profile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-xs">
+                      {c.profile.display_name?.[0]?.toUpperCase() || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <PresenceDot
+                    online={isOnline?.(c.contact_user_id) ?? false}
+                    className="absolute -bottom-0.5 -right-0.5"
+                  />
+                </div>
                 <span className="text-[10px] text-muted-foreground truncate max-w-[56px]">
                   {c.profile.display_name || 'User'}
                 </span>
@@ -300,12 +308,18 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
                 selectedConversationId === conv.id ? 'bg-secondary/70' : ''
               }`}
             >
-              <Avatar className="h-11 w-11 border border-primary/20 shrink-0">
-                <AvatarImage src={conv.otherUser.avatar_url || undefined} />
-                <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
-                  {conv.otherUser.display_name?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative shrink-0">
+                <Avatar className="h-11 w-11 border border-primary/20">
+                  <AvatarImage src={conv.otherUser.avatar_url || undefined} />
+                  <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
+                    {conv.otherUser.display_name?.[0]?.toUpperCase() || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <PresenceDot
+                  online={isOnline?.(conv.otherUser.user_id) ?? false}
+                  className="absolute -bottom-0.5 -right-0.5"
+                />
+              </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="font-medium text-foreground truncate">{conv.otherUser.display_name || 'Unknown'}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">

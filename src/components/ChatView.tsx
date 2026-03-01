@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import PresenceDot from '@/components/PresenceDot';
 
 interface Message {
   id: string;
@@ -20,9 +21,10 @@ interface Message {
 interface ChatViewProps {
   conversationId: string;
   otherUser: { display_name: string | null; avatar_url: string | null; user_id: string } | null;
+  isOnline?: boolean;
 }
 
-export default function ChatView({ conversationId, otherUser }: ChatViewProps) {
+export default function ChatView({ conversationId, otherUser, isOnline }: ChatViewProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -117,17 +119,30 @@ export default function ChatView({ conversationId, otherUser }: ChatViewProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border p-4">
-        <Avatar className="h-10 w-10 border border-primary/20">
-          <AvatarImage src={otherUser?.avatar_url || undefined} />
-          <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
-            {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-10 w-10 border border-primary/20">
+            <AvatarImage src={otherUser?.avatar_url || undefined} />
+            <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
+              {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <PresenceDot
+            online={isOnline ?? false}
+            className="absolute -bottom-0.5 -right-0.5"
+            size="md"
+          />
+        </div>
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">{otherUser?.display_name || 'Unknown'}</h3>
-          <div className="flex items-center gap-1 text-xs text-primary">
-            <Lock className="h-3 w-3" />
-            <span>AES-256-GCM encrypted</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className={isOnline ? 'text-primary' : 'text-muted-foreground'}>
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="flex items-center gap-1 text-primary/60">
+              <Lock className="h-3 w-3" />
+              AES-256-GCM
+            </span>
           </div>
         </div>
       </div>
