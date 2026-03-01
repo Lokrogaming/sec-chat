@@ -46,7 +46,7 @@ const ReleasingSoon = () => {
         </p>
 
         {/* Button */}
-        <Button variant="hero" size="xl" asChild>
+        <Button variant="default" size="lg" asChild>
           <a
             href="https://dcs.lol/lokrogaming"
             target="_blank"
