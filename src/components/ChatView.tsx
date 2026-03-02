@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { encryptMessage, decryptMessage, deriveConversationKey } from '@/lib/crypto';
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Lock, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
+import TypingIndicator from '@/components/TypingIndicator';
 
 interface Message {
   id: string;
@@ -32,10 +33,46 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
   const [sending, setSending] = useState(false);
   const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [otherTyping, setOtherTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     deriveConversationKey(conversationId).then(setCryptoKey);
   }, [conversationId]);
+
+  // Typing presence channel
+  const typingChannelRef = useRef<any>(null);
+  useEffect(() => {
+    if (!user || !conversationId) return;
+
+    const ch = supabase.channel(`typing-${conversationId}`, {
+      config: { presence: { key: user.id } },
+    });
+
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState();
+      const typingUsers = Object.entries(state)
+        .filter(([key]) => key !== user.id)
+        .some(([, presences]: [string, any]) =>
+          presences.some((p: any) => p.typing)
+        );
+      setOtherTyping(typingUsers);
+    }).subscribe();
+
+    typingChannelRef.current = ch;
+    return () => {
+      ch.untrack();
+      supabase.removeChannel(ch);
+    };
+  }, [user, conversationId]);
+
+  const broadcastTyping = useCallback(() => {
+    typingChannelRef.current?.track({ typing: true });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      typingChannelRef.current?.track({ typing: false });
+    }, 2000);
+  }, []);
 
   useEffect(() => {
     if (!cryptoKey) return;
@@ -138,6 +175,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
       });
       if (error) throw error;
       setNewMessage('');
+      typingChannelRef.current?.track({ typing: false });
     } catch (err: any) {
       toast.error('Failed to send message');
     } finally {
@@ -217,6 +255,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
             </div>
           );
         })}
+        {otherTyping && <TypingIndicator name={otherUser?.display_name || 'User'} />}
         <div ref={bottomRef} />
       </div>
 
@@ -224,7 +263,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
       <form onSubmit={sendMessage} className="border-t border-border p-3 flex gap-2">
         <Input
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={(e) => { setNewMessage(e.target.value); broadcastTyping(); }}
           placeholder="Type a message..."
           className="flex-1 bg-input border-border"
           disabled={sending}
