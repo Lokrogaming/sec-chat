@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole } from 'lucide-react';
+import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole, Share2 } from 'lucide-react';
+import ChatRequests from '@/components/ChatRequests';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
 import {
@@ -50,6 +51,14 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
   const [addingContact, setAddingContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [myUserCode, setMyUserCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('user_code').eq('user_id', user.id).single().then(({ data }) => {
+      if (data) setMyUserCode(data.user_code);
+    });
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -240,6 +249,15 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
                 </div>
               </DialogContent>
             </Dialog>
+            <Button variant="ghost" size="icon" onClick={() => {
+              if (myUserCode) {
+                const url = `${window.location.origin}/u/${myUserCode}`;
+                navigator.clipboard.writeText(url);
+                toast.success('Profile link copied!');
+              }
+            }} className="text-muted-foreground hover:text-primary h-9 w-9" title="Share profile">
+              <Share2 className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={onOpenProfile} className="text-muted-foreground hover:text-primary h-9 w-9">
               <Settings className="h-4 w-4" />
             </Button>
@@ -260,6 +278,12 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
           />
         </div>
       </div>
+
+      {/* Chat Requests */}
+      <ChatRequests onAccepted={(convId) => {
+        loadConversations();
+        loadContacts();
+      }} />
 
       {/* Contacts */}
       {contacts.length > 0 && (

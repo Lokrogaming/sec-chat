@@ -158,6 +158,18 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Share this to let others add you</p>
+          <Button
+            variant="link"
+            size="sm"
+            className="text-primary mt-1 h-auto p-0 text-xs"
+            onClick={() => {
+              const url = `${window.location.origin}/u/${profile.user_code}`;
+              navigator.clipboard.writeText(url);
+              toast.success('Profile link copied!');
+            }}
+          >
+            Copy public profile link
+          </Button>
         </div>
 
         {/* Display Name */}
