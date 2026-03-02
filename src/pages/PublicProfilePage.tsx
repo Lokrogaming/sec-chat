@@ -126,7 +126,7 @@ export default function PublicProfilePage() {
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             <span className="font-mono text-sm text-muted-foreground">
-              Cipher<span className="text-primary">Chat</span> Profile
+              Sec<span className="text-primary">Chat</span> Profile
             </span>
           </div>
         </div>
