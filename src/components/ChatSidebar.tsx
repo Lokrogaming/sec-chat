@@ -32,6 +32,7 @@ interface Conversation {
     user_id: string;
   };
   lastMessage?: string;
+  unreadCount: number;
 }
 
 interface SidebarProps {
@@ -113,7 +114,24 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
       otherUser: profiles?.find(pr => pr.user_id === p.user_id) || {
         display_name: null, avatar_url: null, user_id: p.user_id,
       },
+      unreadCount: 0,
     }));
+
+    // Fetch unread counts for all conversations
+    const { data: unreadData } = await supabase
+      .from('messages')
+      .select('conversation_id')
+      .in('conversation_id', convIds)
+      .neq('sender_id', user!.id)
+      .is('read_at', null);
+
+    if (unreadData) {
+      const counts: Record<string, number> = {};
+      unreadData.forEach(m => {
+        counts[m.conversation_id] = (counts[m.conversation_id] || 0) + 1;
+      });
+      convs.forEach(c => { c.unreadCount = counts[c.id] || 0; });
+    }
 
     setConversations(convs);
   };
@@ -313,6 +331,11 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
                   <LockKeyhole className="h-2.5 w-2.5" /> Encrypted
                 </p>
               </div>
+              {conv.unreadCount > 0 && (
+                <span className="shrink-0 flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                  {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                </span>
+              )}
             </button>
           ))
         )}
