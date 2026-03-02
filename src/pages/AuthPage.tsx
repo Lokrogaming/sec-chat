@@ -45,7 +45,7 @@ export default function AuthPage() {
             <Shield className="h-8 w-8 text-primary" />
           </div>
           <h1 className="font-mono text-2xl font-bold text-foreground">
-            Cipher<span className="text-primary text-glow">Chat</span>
+            Sec<span className="text-primary text-glow">Chat</span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             End-to-end encrypted messaging
