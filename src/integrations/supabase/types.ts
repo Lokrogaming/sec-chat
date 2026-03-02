@@ -86,6 +86,7 @@ export type Database = {
           encrypted_content: string
           id: string
           iv: string
+          read_at: string | null
           sender_id: string
         }
         Insert: {
@@ -94,6 +95,7 @@ export type Database = {
           encrypted_content: string
           id?: string
           iv: string
+          read_at?: string | null
           sender_id: string
         }
         Update: {
@@ -102,6 +104,7 @@ export type Database = {
           encrypted_content?: string
           id?: string
           iv?: string
+          read_at?: string | null
           sender_id?: string
         }
         Relationships: [

@@ -5,7 +5,7 @@ import { encryptMessage, decryptMessage, deriveConversationKey } from '@/lib/cry
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Lock } from 'lucide-react';
+import { Send, Lock, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
 
@@ -15,6 +15,7 @@ interface Message {
   encrypted_content: string;
   iv: string;
   created_at: string;
+  read_at: string | null;
   decrypted?: string;
 }
 
@@ -56,10 +57,44 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
         }
         setMessages(prev => [...prev, msg]);
       })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const updated = payload.new as Message;
+        setMessages(prev =>
+          prev.map(m => m.id === updated.id ? { ...m, read_at: updated.read_at } : m)
+        );
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [conversationId, cryptoKey]);
+
+  // Mark unread messages as read when viewing
+  useEffect(() => {
+    if (!user || !messages.length) return;
+    const unreadIds = messages
+      .filter(m => m.sender_id !== user.id && !m.read_at)
+      .map(m => m.id);
+    if (unreadIds.length === 0) return;
+
+    supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .in('id', unreadIds)
+      .then(({ error }) => {
+        if (!error) {
+          setMessages(prev =>
+            prev.map(m =>
+              unreadIds.includes(m.id) ? { ...m, read_at: new Date().toISOString() } : m
+            )
+          );
+        }
+      });
+  }, [messages.length, user]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -168,9 +203,16 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
                   : 'bg-secondary border border-border text-foreground'
               }`}>
                 <p className="text-sm break-words">{msg.decrypted || '...'}</p>
-                <p className={`text-[10px] mt-1 ${isMine ? 'text-primary/50' : 'text-muted-foreground'}`}>
-                  {formatTime(msg.created_at)}
-                </p>
+                <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : ''}`}>
+                  <p className={`text-[10px] ${isMine ? 'text-primary/50' : 'text-muted-foreground'}`}>
+                    {formatTime(msg.created_at)}
+                  </p>
+                  {isMine && (
+                    msg.read_at
+                      ? <CheckCheck className="h-3 w-3 text-primary" />
+                      : <Check className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </div>
               </div>
             </div>
           );
