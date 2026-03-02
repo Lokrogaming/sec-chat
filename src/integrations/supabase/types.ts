@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_requests: {
+        Row: {
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           contact_user_id: string
@@ -158,6 +182,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_chat_request: { Args: { request_id: string }; Returns: string }
       create_conversation_with_participant: {
         Args: { other_user_id: string }
         Returns: string
