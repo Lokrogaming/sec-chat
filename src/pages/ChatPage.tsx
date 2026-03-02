@@ -73,7 +73,7 @@ export default function ChatPage() {
                 <Shield className="h-10 w-10 text-primary/40" />
               </div>
               <h2 className="font-mono text-xl font-semibold text-foreground mb-2">
-                Cipher<span className="text-primary">Chat</span>
+                Sec<span className="text-primary">Chat</span>
               </h2>
               <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                 Select a conversation or add a contact to start messaging securely.
