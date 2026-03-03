@@ -9,6 +9,8 @@ import { Send, Lock, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
 import TypingIndicator from '@/components/TypingIndicator';
+import { renderMarkdown } from '@/lib/markdown';
+import { loadBlacklist, checkBlacklist } from '@/lib/blacklist';
 
 interface Message {
   id: string;
@@ -24,9 +26,10 @@ interface ChatViewProps {
   conversationId: string;
   otherUser: { display_name: string | null; avatar_url: string | null; user_id: string } | null;
   isOnline?: boolean;
+  onMessagesRead?: () => void;
 }
 
-export default function ChatView({ conversationId, otherUser, isOnline }: ChatViewProps) {
+export default function ChatView({ conversationId, otherUser, isOnline, onMessagesRead }: ChatViewProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -35,6 +38,9 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
   const bottomRef = useRef<HTMLDivElement>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load blacklist on mount
+  useEffect(() => { loadBlacklist(); }, []);
 
   useEffect(() => {
     deriveConversationKey(conversationId).then(setCryptoKey);
@@ -92,6 +98,21 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
         } catch {
           msg.decrypted = '[Decryption failed]';
         }
+        // Check blacklist on received messages
+        if (msg.decrypted && msg.sender_id !== user?.id) {
+          const flaggedWord = checkBlacklist(msg.decrypted);
+          if (flaggedWord) {
+            // Flag and remove
+            await supabase.from('flagged_messages').insert({
+              message_id: msg.id,
+              conversation_id: conversationId,
+              sender_id: msg.sender_id,
+              content: msg.decrypted,
+              flagged_word: flaggedWord,
+            });
+            return; // Don't show flagged messages
+          }
+        }
         setMessages(prev => [...prev, msg]);
       })
       .on('postgres_changes', {
@@ -129,6 +150,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
               unreadIds.includes(m.id) ? { ...m, read_at: new Date().toISOString() } : m
             )
           );
+          onMessagesRead?.();
         }
       });
   }, [messages.length, user]);
@@ -164,9 +186,26 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
     e.preventDefault();
     if (!newMessage.trim() || !user || !cryptoKey) return;
 
+    const text = newMessage.trim();
+
+    // Check blacklist before sending
+    const flaggedWord = checkBlacklist(text);
+    if (flaggedWord) {
+      toast.error('Message contains inappropriate content and cannot be sent.');
+      // Still flag it for admin review
+      await supabase.from('flagged_messages').insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: text,
+        flagged_word: flaggedWord,
+      });
+      setNewMessage('');
+      return;
+    }
+
     setSending(true);
     try {
-      const { encrypted, iv } = await encryptMessage(newMessage.trim(), cryptoKey);
+      const { encrypted, iv } = await encryptMessage(text, cryptoKey);
       const { error } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
@@ -240,7 +279,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
                   ? 'bg-primary/15 border border-primary/20 text-foreground'
                   : 'bg-secondary border border-border text-foreground'
               }`}>
-                <p className="text-sm break-words">{msg.decrypted || '...'}</p>
+                <p className="text-sm break-words">{msg.decrypted ? renderMarkdown(msg.decrypted) : '...'}</p>
                 <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : ''}`}>
                   <p className={`text-[10px] ${isMine ? 'text-primary/50' : 'text-muted-foreground'}`}>
                     {formatTime(msg.created_at)}
@@ -264,7 +303,7 @@ export default function ChatView({ conversationId, otherUser, isOnline }: ChatVi
         <Input
           value={newMessage}
           onChange={(e) => { setNewMessage(e.target.value); broadcastTyping(); }}
-          placeholder="Type a message..."
+          placeholder="Type a message... (**bold**, *italic*, [link](url))"
           className="flex-1 bg-input border-border"
           disabled={sending}
         />
