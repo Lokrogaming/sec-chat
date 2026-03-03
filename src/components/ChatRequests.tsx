@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Check, X, Inbox } from 'lucide-react';
+import { Check, X, Inbox, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ChatRequest {
@@ -29,6 +29,21 @@ export default function ChatRequests({ onAccepted }: Props) {
   useEffect(() => {
     if (!user) return;
     loadRequests();
+
+    // Real-time subscription for new chat requests
+    const channel = supabase
+      .channel('chat-requests-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_requests',
+        filter: `receiver_id=eq.${user.id}`,
+      }, () => {
+        loadRequests();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const loadRequests = async () => {
@@ -85,6 +100,12 @@ export default function ChatRequests({ onAccepted }: Props) {
     setProcessing(null);
   };
 
+  const acceptAll = async () => {
+    for (const req of requests) {
+      await acceptRequest(req.id);
+    }
+  };
+
   if (requests.length === 0) return null;
 
   return (
@@ -97,6 +118,17 @@ export default function ChatRequests({ onAccepted }: Props) {
         <span className="flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
           {requests.length}
         </span>
+        {requests.length > 1 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={acceptAll}
+            className="ml-auto h-6 text-[10px] text-primary hover:text-primary"
+          >
+            <CheckCheck className="h-3 w-3 mr-1" />
+            Accept All
+          </Button>
+        )}
       </div>
       <div className="space-y-1">
         {requests.map(req => (

@@ -63,7 +63,7 @@ export default function ChatPage() {
               </button>
             </div>
             <div className="flex-1 min-h-0">
-              <ChatView conversationId={selectedConversation} otherUser={otherUser} isOnline={otherUser ? isOnline(otherUser.user_id) : false} />
+              <ChatView conversationId={selectedConversation} otherUser={otherUser} isOnline={otherUser ? isOnline(otherUser.user_id) : false} onMessagesRead={() => {}} />
             </div>
           </>
         ) : (

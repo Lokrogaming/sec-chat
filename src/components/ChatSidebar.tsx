@@ -4,10 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole, Share2 } from 'lucide-react';
+import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole, Share2, BookOpen } from 'lucide-react';
 import ChatRequests from '@/components/ChatRequests';
+import ConversationMenu from '@/components/ConversationMenu';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +54,7 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
   const [searchQuery, setSearchQuery] = useState('');
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [myUserCode, setMyUserCode] = useState<string | null>(null);
+  const { totalUnread, refetch: refetchUnread } = useUnreadCount();
 
   useEffect(() => {
     if (!user) return;
@@ -64,6 +67,19 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
     if (!user) return;
     loadContacts();
     loadConversations();
+  }, [user]);
+
+  // Real-time refresh for conversations
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('sidebar-messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+        loadConversations();
+        refetchUnread();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const loadContacts = async () => {
@@ -93,7 +109,6 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
   };
 
   const loadConversations = async () => {
-    // Get conversations the user is part of
     const { data: myParticipations } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
@@ -103,7 +118,6 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
 
     const convIds = myParticipations.map(p => p.conversation_id);
 
-    // Get other participants
     const { data: otherParticipants } = await supabase
       .from('conversation_participants')
       .select('conversation_id, user_id')
@@ -118,15 +132,29 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
       .select('user_id, display_name, avatar_url')
       .in('user_id', otherUserIds);
 
-    const convs: Conversation[] = otherParticipants.map(p => ({
-      id: p.conversation_id,
-      otherUser: profiles?.find(pr => pr.user_id === p.user_id) || {
-        display_name: null, avatar_url: null, user_id: p.user_id,
-      },
-      unreadCount: 0,
-    }));
+    // Check for blocked/ignored conversations
+    const { data: settings } = await supabase
+      .from('conversation_settings')
+      .select('conversation_id, is_blocked, is_ignored, is_unread')
+      .eq('user_id', user!.id)
+      .in('conversation_id', convIds);
 
-    // Fetch unread counts for all conversations
+    const settingsMap = new Map(settings?.map(s => [s.conversation_id, s]) || []);
+
+    const convs: Conversation[] = otherParticipants
+      .filter(p => {
+        const s = settingsMap.get(p.conversation_id);
+        return !s?.is_blocked; // Hide blocked conversations
+      })
+      .map(p => ({
+        id: p.conversation_id,
+        otherUser: profiles?.find(pr => pr.user_id === p.user_id) || {
+          display_name: null, avatar_url: null, user_id: p.user_id,
+        },
+        unreadCount: 0,
+      }));
+
+    // Fetch unread counts
     const { data: unreadData } = await supabase
       .from('messages')
       .select('conversation_id')
@@ -139,17 +167,43 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
       unreadData.forEach(m => {
         counts[m.conversation_id] = (counts[m.conversation_id] || 0) + 1;
       });
-      convs.forEach(c => { c.unreadCount = counts[c.id] || 0; });
+      convs.forEach(c => {
+        c.unreadCount = counts[c.id] || 0;
+        // Add manual unread flag
+        const s = settingsMap.get(c.id);
+        if (s?.is_unread && c.unreadCount === 0) c.unreadCount = 1;
+      });
     }
 
     setConversations(convs);
+  };
+
+  const markAllRead = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .neq('sender_id', user.id)
+      .is('read_at', null);
+
+    if (!error) {
+      // Also clear manual unread flags
+      await supabase
+        .from('conversation_settings')
+        .update({ is_unread: false })
+        .eq('user_id', user.id)
+        .eq('is_unread', true);
+
+      toast.success('All messages marked as read');
+      loadConversations();
+      refetchUnread();
+    }
   };
 
   const addContact = async () => {
     if (!addContactCode.trim() || !user) return;
     setAddingContact(true);
 
-    // Look up user by code
     const { data: targetProfile, error } = await supabase
       .from('profiles')
       .select('user_id')
@@ -187,14 +241,12 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
   const startConversation = async (contactUserId: string) => {
     if (!user) return;
 
-    // Check if conversation already exists
     const existing = conversations.find(c => c.otherUser.user_id === contactUserId);
     if (existing) {
       onSelectConversation(existing.id, existing.otherUser);
       return;
     }
 
-    // Create new conversation with participants atomically
     const { data: convId, error: convError } = await supabase
       .rpc('create_conversation_with_participant', { other_user_id: contactUserId });
 
@@ -219,6 +271,11 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
             <h1 className="font-mono text-lg font-bold text-foreground">
               Sec<span className="text-primary">Chat</span>
             </h1>
+            {totalUnread > 0 && (
+              <span className="flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
           </div>
           <div className="flex gap-1">
             <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
@@ -267,15 +324,22 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search..."
-            className="pl-9 bg-input border-border"
-          />
+        {/* Search + Mark All Read */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="pl-9 bg-input border-border"
+            />
+          </div>
+          {totalUnread > 0 && (
+            <Button variant="ghost" size="icon" onClick={markAllRead} className="text-muted-foreground hover:text-primary h-9 w-9 shrink-0" title="Mark all read">
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -332,8 +396,17 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
           filteredConversations.map(conv => (
             <button
               key={conv.id}
-              onClick={() => onSelectConversation(conv.id, conv.otherUser)}
-              className={`w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 ${
+              onClick={() => {
+                onSelectConversation(conv.id, conv.otherUser);
+                // Clear manual unread flag when clicking
+                supabase
+                  .from('conversation_settings')
+                  .update({ is_unread: false })
+                  .eq('user_id', user!.id)
+                  .eq('conversation_id', conv.id)
+                  .then(() => {});
+              }}
+              className={`group w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 ${
                 selectedConversationId === conv.id ? 'bg-secondary/70' : ''
               }`}
             >
@@ -360,6 +433,7 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
                   {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                 </span>
               )}
+              <ConversationMenu conversationId={conv.id} onUpdate={loadConversations} />
             </button>
           ))
         )}
