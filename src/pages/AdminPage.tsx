@@ -69,6 +69,7 @@ export default function AdminPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
+  const [newAnnLinks, setNewAnnLinks] = useState<{label: string; url: string}[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -108,13 +109,15 @@ export default function AdminPage() {
 
   const createAnnouncement = async () => {
     if (!newAnnTitle.trim() || !newAnnContent.trim()) return;
+    const validLinks = newAnnLinks.filter(l => l.label.trim() && l.url.trim());
     const { error } = await supabase.from('announcements').insert({
       title: newAnnTitle.trim(),
       content: newAnnContent.trim(),
       created_by: user!.id,
+      links: validLinks.length > 0 ? validLinks : [],
     });
     if (error) toast.error('Failed to create announcement');
-    else { toast.success('Announcement created'); setNewAnnTitle(''); setNewAnnContent(''); loadAll(); }
+    else { toast.success('Announcement created'); setNewAnnTitle(''); setNewAnnContent(''); setNewAnnLinks([]); loadAll(); }
   };
 
   const toggleAnnouncement = async (id: string, isActive: boolean) => {
@@ -345,6 +348,31 @@ export default function AdminPage() {
                 placeholder="Content (supports **bold**, *italic*, [links](url))"
                 className="bg-input border-border min-h-[80px]"
               />
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Links (optional)</p>
+                {newAnnLinks.map((link, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={link.label}
+                      onChange={e => { const l = [...newAnnLinks]; l[i].label = e.target.value; setNewAnnLinks(l); }}
+                      placeholder="Label"
+                      className="bg-input border-border flex-1"
+                    />
+                    <Input
+                      value={link.url}
+                      onChange={e => { const l = [...newAnnLinks]; l[i].url = e.target.value; setNewAnnLinks(l); }}
+                      placeholder="https://..."
+                      className="bg-input border-border flex-1"
+                    />
+                    <Button size="icon" variant="ghost" className="text-destructive shrink-0" onClick={() => setNewAnnLinks(l => l.filter((_, j) => j !== i))}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button size="sm" variant="outline" onClick={() => setNewAnnLinks(l => [...l, { label: '', url: '' }])}>
+                  <Plus className="h-3 w-3 mr-1" /> Add Link
+                </Button>
+              </div>
               <Button onClick={createAnnouncement} className="w-full">
                 <Megaphone className="h-4 w-4 mr-2" /> Publish Announcement
               </Button>
