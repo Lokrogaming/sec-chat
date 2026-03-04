@@ -22,6 +22,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          links: Json | null
           title: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          links?: Json | null
           title: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          links?: Json | null
           title?: string
         }
         Relationships: []
