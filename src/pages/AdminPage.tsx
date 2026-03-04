@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,6 +45,15 @@ interface BannedIP {
   created_at: string;
 }
 
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  is_active: boolean;
+  created_at: string;
+  expires_at: string | null;
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -56,6 +66,9 @@ export default function AdminPage() {
   const [ipToBan, setIpToBan] = useState('');
   const [ipBanReason, setIpBanReason] = useState('');
   const [timeoutHours, setTimeoutHours] = useState('24');
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newAnnTitle, setNewAnnTitle] = useState('');
+  const [newAnnContent, setNewAnnContent] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -79,16 +92,41 @@ export default function AdminPage() {
   };
 
   const loadAll = async () => {
-    const [profilesRes, flaggedRes, bannedRes, ipsRes] = await Promise.all([
+    const [profilesRes, flaggedRes, bannedRes, ipsRes, annRes] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, avatar_url, user_code'),
       supabase.from('flagged_messages').select('*').eq('reviewed', false).order('created_at', { ascending: false }),
       supabase.from('banned_users').select('*').order('created_at', { ascending: false }),
       supabase.from('banned_ips').select('*').order('created_at', { ascending: false }),
+      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
     ]);
     if (profilesRes.data) setUsers(profilesRes.data);
     if (flaggedRes.data) setFlagged(flaggedRes.data as any);
     if (bannedRes.data) setBannedUsers(bannedRes.data as any);
     if (ipsRes.data) setBannedIPs(ipsRes.data as any);
+    if (annRes.data) setAnnouncements(annRes.data as any);
+  };
+
+  const createAnnouncement = async () => {
+    if (!newAnnTitle.trim() || !newAnnContent.trim()) return;
+    const { error } = await supabase.from('announcements').insert({
+      title: newAnnTitle.trim(),
+      content: newAnnContent.trim(),
+      created_by: user!.id,
+    });
+    if (error) toast.error('Failed to create announcement');
+    else { toast.success('Announcement created'); setNewAnnTitle(''); setNewAnnContent(''); loadAll(); }
+  };
+
+  const toggleAnnouncement = async (id: string, isActive: boolean) => {
+    await supabase.from('announcements').update({ is_active: !isActive }).eq('id', id);
+    toast.success(isActive ? 'Announcement deactivated' : 'Announcement activated');
+    loadAll();
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    await supabase.from('announcements').delete().eq('id', id);
+    toast.success('Announcement deleted');
+    loadAll();
   };
 
   const banUser = async (userId: string, type: 'permanent' | 'timeout') => {
@@ -179,6 +217,7 @@ export default function AdminPage() {
             <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
             <TabsTrigger value="bans">Bans ({bannedUsers.length})</TabsTrigger>
             <TabsTrigger value="ips">IP Bans ({bannedIPs.length})</TabsTrigger>
+            <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="moderation" className="space-y-3">
@@ -287,6 +326,54 @@ export default function AdminPage() {
                 <Button size="sm" variant="outline" onClick={() => unbanIP(ip.id)}>Unban</Button>
               </div>
             ))}
+          </TabsContent>
+
+          <TabsContent value="announcements" className="space-y-3">
+            <div className="p-4 rounded-lg bg-card border border-border space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Plus className="h-4 w-4" /> New Announcement
+              </h3>
+              <Input
+                value={newAnnTitle}
+                onChange={e => setNewAnnTitle(e.target.value)}
+                placeholder="Title"
+                className="bg-input border-border"
+              />
+              <Textarea
+                value={newAnnContent}
+                onChange={e => setNewAnnContent(e.target.value)}
+                placeholder="Content (supports **bold**, *italic*, [links](url))"
+                className="bg-input border-border min-h-[80px]"
+              />
+              <Button onClick={createAnnouncement} className="w-full">
+                <Megaphone className="h-4 w-4 mr-2" /> Publish Announcement
+              </Button>
+            </div>
+
+            {announcements.map(a => (
+              <div key={a.id} className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+                <Megaphone className={`h-4 w-4 mt-0.5 shrink-0 ${a.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{a.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.content}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(a.created_at).toLocaleDateString()}
+                    {!a.is_active && ' · Inactive'}
+                  </p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => toggleAnnouncement(a.id, a.is_active)}>
+                    <Power className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteAnnouncement(a.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {announcements.length === 0 && (
+              <p className="text-center py-8 text-muted-foreground">No announcements yet</p>
+            )}
           </TabsContent>
         </Tabs>
       </div>
