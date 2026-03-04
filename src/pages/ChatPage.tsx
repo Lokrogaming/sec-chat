@@ -4,6 +4,7 @@ import { usePresence } from '@/hooks/usePresence';
 import ChatSidebar from '@/components/ChatSidebar';
 import ChatView from '@/components/ChatView';
 import ProfilePage from '@/pages/ProfilePage';
+import AnnouncementOverlay from '@/components/AnnouncementOverlay';
 import { Shield, Lock } from 'lucide-react';
 
 export default function ChatPage() {
@@ -39,6 +40,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-background">
+      <AnnouncementOverlay />
       {/* Sidebar - hidden on mobile when conversation selected */}
       <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : ''}`}>
         <ChatSidebar
