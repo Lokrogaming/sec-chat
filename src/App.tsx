@@ -11,6 +11,7 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminPage from "./pages/AdminPage";
+import VideosPage from "./pages/VideosPage";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage onBack={() => window.history.back()} />} />
             <Route path="/u/:userCode" element={<PublicProfilePage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/videos" element={<VideosPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

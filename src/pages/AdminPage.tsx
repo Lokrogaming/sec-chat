@@ -6,9 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface UserProfile {
   user_id: string;
@@ -70,6 +74,7 @@ export default function AdminPage() {
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnLinks, setNewAnnLinks] = useState<{label: string; url: string}[]>([]);
+  const [newAnnExpires, setNewAnnExpires] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -115,9 +120,10 @@ export default function AdminPage() {
       content: newAnnContent.trim(),
       created_by: user!.id,
       links: validLinks.length > 0 ? validLinks : [],
+      expires_at: newAnnExpires ? newAnnExpires.toISOString() : null,
     });
     if (error) toast.error('Failed to create announcement');
-    else { toast.success('Announcement created'); setNewAnnTitle(''); setNewAnnContent(''); setNewAnnLinks([]); loadAll(); }
+    else { toast.success('Announcement created'); setNewAnnTitle(''); setNewAnnContent(''); setNewAnnLinks([]); setNewAnnExpires(undefined); loadAll(); }
   };
 
   const toggleAnnouncement = async (id: string, isActive: boolean) => {
@@ -372,6 +378,32 @@ export default function AdminPage() {
                 <Button size="sm" variant="outline" onClick={() => setNewAnnLinks(l => [...l, { label: '', url: '' }])}>
                   <Plus className="h-3 w-3 mr-1" /> Add Link
                 </Button>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Expiration date (optional)</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newAnnExpires && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newAnnExpires ? format(newAnnExpires, 'PPP') : 'No expiration'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newAnnExpires}
+                      onSelect={setNewAnnExpires}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {newAnnExpires && (
+                  <Button size="sm" variant="ghost" onClick={() => setNewAnnExpires(undefined)} className="text-xs text-muted-foreground">
+                    Clear expiration
+                  </Button>
+                )}
               </div>
               <Button onClick={createAnnouncement} className="w-full">
                 <Megaphone className="h-4 w-4 mr-2" /> Publish Announcement
