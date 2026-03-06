@@ -13,8 +13,6 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   user_id: string;
