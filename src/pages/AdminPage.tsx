@@ -253,6 +253,7 @@ export default function AdminPage() {
             <TabsTrigger value="bans">Bans ({bannedUsers.length})</TabsTrigger>
             <TabsTrigger value="ips">IP Bans ({bannedIPs.length})</TabsTrigger>
             <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
+            <TabsTrigger value="reports">Video Reports ({videoReports.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="moderation" className="space-y-3">
