@@ -40,9 +40,10 @@ interface Conversation {
 
 interface SidebarProps {
   onSelectConversation: (id: string, otherUser: any) => void;
-  onOpenProfile: () => void;
   selectedConversationId: string | null;
   isOnline?: (userId: string) => boolean;
+  addContactOpen: boolean;
+  setAddContactOpen: (open: boolean) => void;
 }
 
 export default function ChatSidebar({ onSelectConversation, onOpenProfile, selectedConversationId, isOnline }: SidebarProps) {
