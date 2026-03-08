@@ -85,6 +85,7 @@ export default function AdminPage() {
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnLinks, setNewAnnLinks] = useState<{label: string; url: string}[]>([]);
   const [newAnnExpires, setNewAnnExpires] = useState<Date | undefined>(undefined);
+  const [videoReports, setVideoReports] = useState<VideoReport[]>([]);
 
   useEffect(() => {
     if (!user) return;
