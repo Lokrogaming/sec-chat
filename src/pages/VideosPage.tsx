@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Heart, MessageCircle, Share2, Bookmark, ArrowLeft, Upload, Play, Pause,
-  UserPlus, UserCheck, Send, X, Trash2, Volume2, VolumeX
+  UserPlus, UserCheck, Send, X, Trash2, Volume2, VolumeX, Flag
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
