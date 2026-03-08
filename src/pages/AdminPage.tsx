@@ -192,6 +192,19 @@ export default function AdminPage() {
     loadAll();
   };
 
+  const dismissReport = async (reportId: string) => {
+    await supabase.from('video_reports').update({ status: 'dismissed', reviewed_by: user!.id }).eq('id', reportId);
+    toast.success('Report dismissed');
+    loadAll();
+  };
+
+  const removeReportedVideo = async (reportId: string, videoId: string) => {
+    // Delete video (CASCADE will remove report too)
+    await supabase.from('videos').delete().eq('id', videoId);
+    toast.success('Video removed');
+    loadAll();
+  };
+
   const reviewFlagged = async (id: string) => {
     await supabase.from('flagged_messages').update({ reviewed: true, reviewed_by: user!.id }).eq('id', id);
     toast.success('Marked as reviewed');
