@@ -60,6 +60,9 @@ export default function VideosPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [playing, setPlaying] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(true);
+  const [reportedVideos, setReportedVideos] = useState<Set<string>>(new Set());
+  const [showReportDialog, setShowReportDialog] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('');
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
 
