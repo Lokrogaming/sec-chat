@@ -271,6 +271,31 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
           </div>
         </div>
 
+        {/* Add Contact Dialog */}
+        <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground font-mono">Add Contact</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-muted-foreground">Enter the user's ID code to add them as a contact.</p>
+              <Input
+                value={addContactCode}
+                onChange={(e) => setAddContactCode(e.target.value)}
+                placeholder="Enter user ID code..."
+                className="bg-input border-border font-mono"
+              />
+              <Button
+                onClick={addContact}
+                disabled={addingContact || !addContactCode.trim()}
+                className="w-full gradient-primary text-primary-foreground font-semibold hover:opacity-90"
+              >
+                {addingContact ? 'Adding...' : 'Add Contact'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Search + Mark All Read */}
         <div className="flex gap-2">
           <div className="relative flex-1">
