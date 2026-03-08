@@ -58,6 +58,16 @@ interface Announcement {
   expires_at: string | null;
 }
 
+interface VideoReport {
+  id: string;
+  video_id: string;
+  reporter_id: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  video?: { title: string; video_url: string; creator_id: string };
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
