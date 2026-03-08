@@ -57,13 +57,6 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('profiles').select('user_code').eq('user_id', user.id).single().then(({ data }) => {
-      if (data) setMyUserCode(data.user_code);
-    });
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
     loadContacts();
     loadConversations();
   }, [user]);
