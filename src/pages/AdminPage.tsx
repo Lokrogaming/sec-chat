@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power, CalendarIcon } from 'lucide-react';
+import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power, CalendarIcon, Flag, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -58,6 +58,16 @@ interface Announcement {
   expires_at: string | null;
 }
 
+interface VideoReport {
+  id: string;
+  video_id: string;
+  reporter_id: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  video?: { title: string; video_url: string; creator_id: string };
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -75,6 +85,7 @@ export default function AdminPage() {
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnLinks, setNewAnnLinks] = useState<{label: string; url: string}[]>([]);
   const [newAnnExpires, setNewAnnExpires] = useState<Date | undefined>(undefined);
+  const [videoReports, setVideoReports] = useState<VideoReport[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -98,18 +109,20 @@ export default function AdminPage() {
   };
 
   const loadAll = async () => {
-    const [profilesRes, flaggedRes, bannedRes, ipsRes, annRes] = await Promise.all([
+    const [profilesRes, flaggedRes, bannedRes, ipsRes, annRes, reportsRes] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, avatar_url, user_code'),
       supabase.from('flagged_messages').select('*').eq('reviewed', false).order('created_at', { ascending: false }),
       supabase.from('banned_users').select('*').order('created_at', { ascending: false }),
       supabase.from('banned_ips').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+      supabase.from('video_reports').select('*, video:videos(title, video_url, creator_id)').eq('status', 'pending').order('created_at', { ascending: false }),
     ]);
     if (profilesRes.data) setUsers(profilesRes.data);
     if (flaggedRes.data) setFlagged(flaggedRes.data as any);
     if (bannedRes.data) setBannedUsers(bannedRes.data as any);
     if (ipsRes.data) setBannedIPs(ipsRes.data as any);
     if (annRes.data) setAnnouncements(annRes.data as any);
+    if (reportsRes.data) setVideoReports(reportsRes.data as any);
   };
 
   const createAnnouncement = async () => {
@@ -179,6 +192,19 @@ export default function AdminPage() {
     loadAll();
   };
 
+  const dismissReport = async (reportId: string) => {
+    await supabase.from('video_reports').update({ status: 'dismissed', reviewed_by: user!.id }).eq('id', reportId);
+    toast.success('Report dismissed');
+    loadAll();
+  };
+
+  const removeReportedVideo = async (reportId: string, videoId: string) => {
+    // Delete video (CASCADE will remove report too)
+    await supabase.from('videos').delete().eq('id', videoId);
+    toast.success('Video removed');
+    loadAll();
+  };
+
   const reviewFlagged = async (id: string) => {
     await supabase.from('flagged_messages').update({ reviewed: true, reviewed_by: user!.id }).eq('id', id);
     toast.success('Marked as reviewed');
@@ -227,6 +253,7 @@ export default function AdminPage() {
             <TabsTrigger value="bans">Bans ({bannedUsers.length})</TabsTrigger>
             <TabsTrigger value="ips">IP Bans ({bannedIPs.length})</TabsTrigger>
             <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
+            <TabsTrigger value="reports">Video Reports ({videoReports.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="moderation" className="space-y-3">
@@ -434,6 +461,45 @@ export default function AdminPage() {
             {announcements.length === 0 && (
               <p className="text-center py-8 text-muted-foreground">No announcements yet</p>
             )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-3">
+            {videoReports.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Flag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No pending video reports</p>
+              </div>
+            ) : videoReports.map(r => (
+              <div key={r.id} className="p-4 rounded-lg bg-card border border-border">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Video className="h-4 w-4 text-primary shrink-0" />
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {r.video?.title || 'Deleted video'}
+                      </p>
+                    </div>
+                    <p className="text-sm text-foreground/80 mt-1">{r.reason}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Reported by: {users.find(u => u.user_id === r.reporter_id)?.display_name || r.reporter_id.slice(0, 8)}
+                      {r.video?.creator_id && ` · Creator: ${users.find(u => u.user_id === r.video!.creator_id)?.display_name || r.video.creator_id.slice(0, 8)}`}
+                      {' · '}
+                      {new Date(r.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => dismissReport(r.id)}>
+                      Dismiss
+                    </Button>
+                    {r.video && (
+                      <Button size="sm" variant="destructive" onClick={() => removeReportedVideo(r.id, r.video_id)}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Remove Video
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </TabsContent>
         </Tabs>
       </div>
