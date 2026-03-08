@@ -5,6 +5,7 @@ import ChatSidebar from '@/components/ChatSidebar';
 import ChatView from '@/components/ChatView';
 import ProfilePage from '@/pages/ProfilePage';
 import AnnouncementOverlay from '@/components/AnnouncementOverlay';
+import AppNavBar from '@/components/AppNavBar';
 import { Shield, Lock } from 'lucide-react';
 
 export default function ChatPage() {
@@ -13,6 +14,7 @@ export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
 
   const handleSelectConversation = (convId: string, other: any) => {
     setSelectedConversation(convId);
@@ -23,12 +25,16 @@ export default function ChatPage() {
   if (showProfile) {
     return (
       <div className="flex h-screen bg-background">
+        <div className="hidden md:block">
+          <AppNavBar onOpenProfile={() => setShowProfile(true)} onAddContact={() => setAddContactOpen(true)} />
+        </div>
         <div className="w-80 shrink-0 hidden md:block">
           <ChatSidebar
             onSelectConversation={handleSelectConversation}
-            onOpenProfile={() => setShowProfile(true)}
             selectedConversationId={selectedConversation}
             isOnline={isOnline}
+            addContactOpen={addContactOpen}
+            setAddContactOpen={setAddContactOpen}
           />
         </div>
         <div className="flex-1">
@@ -41,13 +47,19 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-background">
       <AnnouncementOverlay />
+      {/* Nav bar - hidden on mobile when conversation selected */}
+      <div className={`hidden md:block`}>
+        <AppNavBar onOpenProfile={() => setShowProfile(true)} onAddContact={() => setAddContactOpen(true)} />
+      </div>
+
       {/* Sidebar - hidden on mobile when conversation selected */}
       <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : ''}`}>
         <ChatSidebar
           onSelectConversation={handleSelectConversation}
-          onOpenProfile={() => setShowProfile(true)}
           selectedConversationId={selectedConversation}
           isOnline={isOnline}
+          addContactOpen={addContactOpen}
+          setAddContactOpen={setAddContactOpen}
         />
       </div>
 

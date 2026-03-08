@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, MessageSquarePlus, Search, Settings, LogOut, Shield, Users, LockKeyhole, Share2, BookOpen } from 'lucide-react';
+import { MessageSquarePlus, Search, Shield, Users, LockKeyhole, BookOpen } from 'lucide-react';
 import ChatRequests from '@/components/ChatRequests';
 import ConversationMenu from '@/components/ConversationMenu';
 import { toast } from 'sonner';
@@ -40,28 +40,20 @@ interface Conversation {
 
 interface SidebarProps {
   onSelectConversation: (id: string, otherUser: any) => void;
-  onOpenProfile: () => void;
   selectedConversationId: string | null;
   isOnline?: (userId: string) => boolean;
+  addContactOpen: boolean;
+  setAddContactOpen: (open: boolean) => void;
 }
 
-export default function ChatSidebar({ onSelectConversation, onOpenProfile, selectedConversationId, isOnline }: SidebarProps) {
+export default function ChatSidebar({ onSelectConversation, selectedConversationId, isOnline, addContactOpen, setAddContactOpen }: SidebarProps) {
   const { user, signOut } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [addContactCode, setAddContactCode] = useState('');
   const [addingContact, setAddingContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [addContactOpen, setAddContactOpen] = useState(false);
-  const [myUserCode, setMyUserCode] = useState<string | null>(null);
   const { totalUnread, refetch: refetchUnread } = useUnreadCount();
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from('profiles').select('user_code').eq('user_id', user.id).single().then(({ data }) => {
-      if (data) setMyUserCode(data.user_code);
-    });
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -277,52 +269,32 @@ export default function ChatSidebar({ onSelectConversation, onOpenProfile, selec
               </span>
             )}
           </div>
-          <div className="flex gap-1">
-            <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-9 w-9">
-                  <UserPlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle className="text-foreground font-mono">Add Contact</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <p className="text-sm text-muted-foreground">Enter the user's ID code to add them as a contact.</p>
-                  <Input
-                    value={addContactCode}
-                    onChange={(e) => setAddContactCode(e.target.value)}
-                    placeholder="Enter user ID code..."
-                    className="bg-input border-border font-mono"
-                  />
-                  <Button
-                    onClick={addContact}
-                    disabled={addingContact || !addContactCode.trim()}
-                    className="w-full gradient-primary text-primary-foreground font-semibold hover:opacity-90"
-                  >
-                    {addingContact ? 'Adding...' : 'Add Contact'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="ghost" size="icon" onClick={() => {
-              if (myUserCode) {
-                const url = `${window.location.origin}/u/${myUserCode}`;
-                navigator.clipboard.writeText(url);
-                toast.success('Profile link copied!');
-              }
-            }} className="text-muted-foreground hover:text-primary h-9 w-9" title="Share profile">
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onOpenProfile} className="text-muted-foreground hover:text-primary h-9 w-9">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive h-9 w-9">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
+
+        {/* Add Contact Dialog */}
+        <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground font-mono">Add Contact</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-muted-foreground">Enter the user's ID code to add them as a contact.</p>
+              <Input
+                value={addContactCode}
+                onChange={(e) => setAddContactCode(e.target.value)}
+                placeholder="Enter user ID code..."
+                className="bg-input border-border font-mono"
+              />
+              <Button
+                onClick={addContact}
+                disabled={addingContact || !addContactCode.trim()}
+                className="w-full gradient-primary text-primary-foreground font-semibold hover:opacity-90"
+              >
+                {addingContact ? 'Adding...' : 'Add Contact'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Search + Mark All Read */}
         <div className="flex gap-2">
