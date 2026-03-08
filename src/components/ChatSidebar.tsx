@@ -269,51 +269,6 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
               </span>
             )}
           </div>
-          <div className="flex gap-1">
-            <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-9 w-9">
-                  <UserPlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle className="text-foreground font-mono">Add Contact</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <p className="text-sm text-muted-foreground">Enter the user's ID code to add them as a contact.</p>
-                  <Input
-                    value={addContactCode}
-                    onChange={(e) => setAddContactCode(e.target.value)}
-                    placeholder="Enter user ID code..."
-                    className="bg-input border-border font-mono"
-                  />
-                  <Button
-                    onClick={addContact}
-                    disabled={addingContact || !addContactCode.trim()}
-                    className="w-full gradient-primary text-primary-foreground font-semibold hover:opacity-90"
-                  >
-                    {addingContact ? 'Adding...' : 'Add Contact'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="ghost" size="icon" onClick={() => {
-              if (myUserCode) {
-                const url = `${window.location.origin}/u/${myUserCode}`;
-                navigator.clipboard.writeText(url);
-                toast.success('Profile link copied!');
-              }
-            }} className="text-muted-foreground hover:text-primary h-9 w-9" title="Share profile">
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onOpenProfile} className="text-muted-foreground hover:text-primary h-9 w-9">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive h-9 w-9">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         {/* Search + Mark All Read */}
