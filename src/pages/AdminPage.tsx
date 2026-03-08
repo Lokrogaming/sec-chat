@@ -462,6 +462,45 @@ export default function AdminPage() {
               <p className="text-center py-8 text-muted-foreground">No announcements yet</p>
             )}
           </TabsContent>
+
+          <TabsContent value="reports" className="space-y-3">
+            {videoReports.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Flag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No pending video reports</p>
+              </div>
+            ) : videoReports.map(r => (
+              <div key={r.id} className="p-4 rounded-lg bg-card border border-border">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Video className="h-4 w-4 text-primary shrink-0" />
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {r.video?.title || 'Deleted video'}
+                      </p>
+                    </div>
+                    <p className="text-sm text-foreground/80 mt-1">{r.reason}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Reported by: {users.find(u => u.user_id === r.reporter_id)?.display_name || r.reporter_id.slice(0, 8)}
+                      {r.video?.creator_id && ` · Creator: ${users.find(u => u.user_id === r.video!.creator_id)?.display_name || r.video.creator_id.slice(0, 8)}`}
+                      {' · '}
+                      {new Date(r.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => dismissReport(r.id)}>
+                      Dismiss
+                    </Button>
+                    {r.video && (
+                      <Button size="sm" variant="destructive" onClick={() => removeReportedVideo(r.id, r.video_id)}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Remove Video
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </TabsContent>
         </Tabs>
       </div>
     </div>
