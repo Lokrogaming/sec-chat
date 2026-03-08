@@ -452,7 +452,46 @@ export default function VideosPage() {
                   <button onClick={() => setMuted(!muted)} className="flex flex-col items-center gap-1">
                     {muted ? <VolumeX className="h-6 w-6 text-white/60" /> : <Volume2 className="h-6 w-6 text-white" />}
                   </button>
+
+                  {!isOwnVideo && (
+                    <button
+                      onClick={() => setShowReportDialog(video.id)}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <Flag className={`h-6 w-6 ${reportedVideos.has(video.id) ? 'fill-destructive text-destructive' : 'text-white/60'}`} />
+                    </button>
+                  )}
                 </div>
+
+                {/* Report dialog */}
+                {showReportDialog === video.id && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-30">
+                    <div className="bg-card rounded-xl border border-border p-4 w-[85%] max-w-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Flag className="h-4 w-4 text-destructive" /> Report Video
+                        </h3>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setShowReportDialog(null); setReportReason(''); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={reportReason}
+                        onChange={e => setReportReason(e.target.value)}
+                        placeholder="Why are you reporting this video?"
+                        className="bg-input border-border min-h-[80px]"
+                      />
+                      <Button
+                        onClick={() => reportVideo(video.id)}
+                        disabled={!reportReason.trim()}
+                        variant="destructive"
+                        className="w-full"
+                      >
+                        Submit Report
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Comments panel */}
                 {showComments && currentVideo?.id === video.id && (
