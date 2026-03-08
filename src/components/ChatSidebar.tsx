@@ -53,8 +53,6 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
   const [addContactCode, setAddContactCode] = useState('');
   const [addingContact, setAddingContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [addContactOpen, setAddContactOpen] = useState(false);
-  const [myUserCode, setMyUserCode] = useState<string | null>(null);
   const { totalUnread, refetch: refetchUnread } = useUnreadCount();
 
   useEffect(() => {
