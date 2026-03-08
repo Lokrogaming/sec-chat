@@ -118,6 +118,20 @@ export default function VideosPage() {
     if (followsRes.data) setFollowedUsers(new Set(followsRes.data.map(f => f.following_id)));
   };
 
+  const reportVideo = async (videoId: string) => {
+    if (!user || !reportReason.trim()) return;
+    const { error } = await supabase.from('video_reports').insert({
+      video_id: videoId,
+      reporter_id: user.id,
+      reason: reportReason.trim(),
+    });
+    if (error) { toast.error('Failed to report video'); return; }
+    setReportedVideos(prev => new Set(prev).add(videoId));
+    setShowReportDialog(null);
+    setReportReason('');
+    toast.success('Video reported');
+  };
+
   const loadComments = async (videoId: string) => {
     const { data } = await supabase
       .from('video_comments')
