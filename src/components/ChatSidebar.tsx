@@ -46,7 +46,7 @@ interface SidebarProps {
   setAddContactOpen: (open: boolean) => void;
 }
 
-export default function ChatSidebar({ onSelectConversation, onOpenProfile, selectedConversationId, isOnline }: SidebarProps) {
+export default function ChatSidebar({ onSelectConversation, selectedConversationId, isOnline, addContactOpen, setAddContactOpen }: SidebarProps) {
   const { user, signOut } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
