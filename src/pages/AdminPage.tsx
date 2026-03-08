@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power, CalendarIcon } from 'lucide-react';
+import { Shield, Ban, Clock, Trash2, Eye, ArrowLeft, Globe, Megaphone, Plus, Power, CalendarIcon, Flag, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
