@@ -109,18 +109,20 @@ export default function AdminPage() {
   };
 
   const loadAll = async () => {
-    const [profilesRes, flaggedRes, bannedRes, ipsRes, annRes] = await Promise.all([
+    const [profilesRes, flaggedRes, bannedRes, ipsRes, annRes, reportsRes] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, avatar_url, user_code'),
       supabase.from('flagged_messages').select('*').eq('reviewed', false).order('created_at', { ascending: false }),
       supabase.from('banned_users').select('*').order('created_at', { ascending: false }),
       supabase.from('banned_ips').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+      supabase.from('video_reports').select('*, video:videos(title, video_url, creator_id)').eq('status', 'pending').order('created_at', { ascending: false }),
     ]);
     if (profilesRes.data) setUsers(profilesRes.data);
     if (flaggedRes.data) setFlagged(flaggedRes.data as any);
     if (bannedRes.data) setBannedUsers(bannedRes.data as any);
     if (ipsRes.data) setBannedIPs(ipsRes.data as any);
     if (annRes.data) setAnnouncements(annRes.data as any);
+    if (reportsRes.data) setVideoReports(reportsRes.data as any);
   };
 
   const createAnnouncement = async () => {
