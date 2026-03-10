@@ -43,7 +43,19 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   useEffect(() => { loadBlacklist(); }, []);
 
   useEffect(() => {
-    deriveConversationKey(conversationId).then(setCryptoKey);
+    // Fetch the generated encryption key from the conversation record
+    supabase
+      .from('conversations')
+      .select('encryption_key')
+      .eq('id', conversationId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data?.encryption_key) {
+          console.error('Failed to fetch encryption key', error);
+          return;
+        }
+        importKey(data.encryption_key).then(setCryptoKey);
+      });
   }, [conversationId]);
 
   // Typing presence channel
