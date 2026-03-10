@@ -284,7 +284,7 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
             <span className="text-muted-foreground/30">•</span>
             <span className="flex items-center gap-1 text-primary/60">
               <Lock className="h-3 w-3" />
-              AES-256-GCM
+              ECDH + AES-256-GCM
             </span>
           </div>
         </div>
