@@ -1,85 +1,33 @@
-// ECDH + AES-GCM encryption utilities for end-to-end encrypted messaging
-// Private keys are stored in localStorage, public keys in the database.
-// Shared AES keys are derived per-conversation via ECDH key agreement.
+// AES-GCM encryption utilities for end-to-end encrypted messaging
 
-const AES_ALGORITHM = 'AES-GCM';
-const AES_KEY_LENGTH = 256;
-const ECDH_CURVE = 'P-256';
-const STORAGE_KEY_PREFIX = 'secchat_privkey_';
+const ALGORITHM = 'AES-GCM';
+const KEY_LENGTH = 256;
 
-// ─── ECDH Keypair Management ───
-
-export async function generateKeyPair(): Promise<CryptoKeyPair> {
+// Generate a new AES-GCM key
+export async function generateKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(
-    { name: 'ECDH', namedCurve: ECDH_CURVE },
+    { name: ALGORITHM, length: KEY_LENGTH },
     true,
-    ['deriveKey']
-  );
-}
-
-export async function exportPublicKey(key: CryptoKey): Promise<string> {
-  const raw = await crypto.subtle.exportKey('raw', key);
-  return arrayBufferToBase64(raw);
-}
-
-export async function exportPrivateKey(key: CryptoKey): Promise<string> {
-  const jwk = await crypto.subtle.exportKey('jwk', key);
-  return JSON.stringify(jwk);
-}
-
-export async function importPublicKey(base64Key: string): Promise<CryptoKey> {
-  const raw = base64ToArrayBuffer(base64Key);
-  return crypto.subtle.importKey(
-    'raw',
-    raw,
-    { name: 'ECDH', namedCurve: ECDH_CURVE },
-    true,
-    []
-  );
-}
-
-export async function importPrivateKey(jwkString: string): Promise<CryptoKey> {
-  const jwk = JSON.parse(jwkString);
-  return crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    { name: 'ECDH', namedCurve: ECDH_CURVE },
-    true,
-    ['deriveKey']
-  );
-}
-
-// ─── localStorage Private Key Storage ───
-
-export function storePrivateKey(userId: string, jwkString: string): void {
-  localStorage.setItem(STORAGE_KEY_PREFIX + userId, jwkString);
-}
-
-export function loadPrivateKey(userId: string): string | null {
-  return localStorage.getItem(STORAGE_KEY_PREFIX + userId);
-}
-
-export function clearPrivateKey(userId: string): void {
-  localStorage.removeItem(STORAGE_KEY_PREFIX + userId);
-}
-
-// ─── ECDH Shared Secret Derivation ───
-
-export async function deriveSharedKey(
-  myPrivateKey: CryptoKey,
-  theirPublicKey: CryptoKey
-): Promise<CryptoKey> {
-  return crypto.subtle.deriveKey(
-    { name: 'ECDH', public: theirPublicKey },
-    myPrivateKey,
-    { name: AES_ALGORITHM, length: AES_KEY_LENGTH },
-    false,
     ['encrypt', 'decrypt']
   );
 }
 
-// ─── AES-GCM Encrypt / Decrypt ───
+// Export key to Base64 for storage
+export async function exportKey(key: CryptoKey): Promise<string> {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  return arrayBufferToBase64(raw);
+}
 
+// Import key from Base64
+export async function importKey(base64Key: string): Promise<CryptoKey> {
+  const raw = base64ToArrayBuffer(base64Key);
+  return crypto.subtle.importKey('raw', raw, { name: ALGORITHM }, true, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
+
+// Encrypt a message
 export async function encryptMessage(
   plaintext: string,
   key: CryptoKey
@@ -89,7 +37,7 @@ export async function encryptMessage(
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: AES_ALGORITHM, iv },
+    { name: ALGORITHM, iv },
     key,
     data
   );
@@ -100,6 +48,7 @@ export async function encryptMessage(
   };
 }
 
+// Decrypt a message
 export async function decryptMessage(
   encryptedBase64: string,
   ivBase64: string,
@@ -109,15 +58,40 @@ export async function decryptMessage(
   const iv = base64ToArrayBuffer(ivBase64);
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: AES_ALGORITHM, iv: new Uint8Array(iv) },
+    { name: ALGORITHM, iv: new Uint8Array(iv) },
     key,
     ciphertext
   );
 
-  return new TextDecoder().decode(decrypted);
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
 }
 
-// ─── Helpers ───
+// Derive a shared key from a conversation ID (simplified key derivation)
+// In production, you'd use proper key exchange (e.g., X25519)
+export async function deriveConversationKey(conversationId: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(conversationId.replace(/-/g, '')),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode('cipherchat-v1'),
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
