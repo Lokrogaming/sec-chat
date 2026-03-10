@@ -67,30 +67,10 @@ export async function decryptMessage(
   return decoder.decode(decrypted);
 }
 
-// Derive a shared key from a conversation ID (simplified key derivation)
-// In production, you'd use proper key exchange (e.g., X25519)
-export async function deriveConversationKey(conversationId: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(conversationId.replace(/-/g, '')),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: encoder.encode('cipherchat-v1'),
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: ALGORITHM, length: KEY_LENGTH },
-    true,
-    ['encrypt', 'decrypt']
-  );
+// Generate a Base64-encoded random key (for storage in DB)
+export async function generateBase64Key(): Promise<string> {
+  const key = await generateKey();
+  return exportKey(key);
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
