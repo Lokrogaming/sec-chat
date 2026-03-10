@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { encryptMessage, decryptMessage, importKey } from '@/lib/crypto';
+import { encryptMessage, decryptMessage, deriveSharedKey, importPublicKey, importPrivateKey, loadPrivateKey } from '@/lib/crypto';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
