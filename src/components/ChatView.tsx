@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { encryptMessage, decryptMessage, importKey } from '@/lib/crypto';
+import { encryptMessage, decryptMessage, deriveSharedKey, importPublicKey, importPrivateKey, loadPrivateKey } from '@/lib/crypto';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -43,20 +43,39 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   useEffect(() => { loadBlacklist(); }, []);
 
   useEffect(() => {
-    // Fetch the generated encryption key from the conversation record
-    supabase
-      .from('conversations')
-      .select('encryption_key')
-      .eq('id', conversationId)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data?.encryption_key) {
-          console.error('Failed to fetch encryption key', error);
+    if (!user || !otherUser) return;
+
+    (async () => {
+      try {
+        // Load own private key from localStorage
+        const privJwk = loadPrivateKey(user.id);
+        if (!privJwk) {
+          console.error('Private key not found in localStorage');
           return;
         }
-        importKey(data.encryption_key).then(setCryptoKey);
-      });
-  }, [conversationId]);
+        const myPrivateKey = await importPrivateKey(privJwk);
+
+        // Fetch other user's public key from profiles
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('public_key')
+          .eq('user_id', otherUser.user_id)
+          .single();
+
+        if (error || !data?.public_key) {
+          console.error('Other user public key not found', error);
+          return;
+        }
+        const theirPublicKey = await importPublicKey(data.public_key);
+
+        // Derive shared AES key via ECDH
+        const shared = await deriveSharedKey(myPrivateKey, theirPublicKey);
+        setCryptoKey(shared);
+      } catch (err) {
+        console.error('Failed to derive shared key', err);
+      }
+    })();
+  }, [conversationId, user, otherUser]);
 
   // Typing presence channel
   const typingChannelRef = useRef<any>(null);
@@ -265,7 +284,7 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
             <span className="text-muted-foreground/30">•</span>
             <span className="flex items-center gap-1 text-primary/60">
               <Lock className="h-3 w-3" />
-              AES-256-GCM
+              ECDH + AES-256-GCM
             </span>
           </div>
         </div>

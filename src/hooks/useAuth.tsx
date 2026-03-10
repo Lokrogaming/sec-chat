@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  generateKeyPair,
+  exportPublicKey,
+  exportPrivateKey,
+  storePrivateKey,
+  loadPrivateKey,
+  clearPrivateKey,
+} from '@/lib/crypto';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +21,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Ensure user has an ECDH keypair: private in localStorage, public in profiles */
+async function ensureKeypair(userId: string) {
+  const existing = loadPrivateKey(userId);
+  if (existing) {
+    // Check if public key is already in the profile
+    const { data } = await supabase
+      .from('profiles')
+      .select('public_key')
+      .eq('user_id', userId)
+      .single();
+    if (data?.public_key) return; // All good
+  }
+
+  // Generate fresh keypair
+  const keyPair = await generateKeyPair();
+  const pubBase64 = await exportPublicKey(keyPair.publicKey);
+  const privJwk = await exportPrivateKey(keyPair.privateKey);
+
+  // Store private key locally
+  storePrivateKey(userId, privJwk);
+
+  // Store public key in profile
+  await supabase
+    .from('profiles')
+    .update({ public_key: pubBase64 })
+    .eq('user_id', userId);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -24,6 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session?.user) {
+          // Defer keypair check to avoid blocking auth
+          setTimeout(() => ensureKeypair(session.user.id), 0);
+        }
       }
     );
 
@@ -31,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        setTimeout(() => ensureKeypair(session.user.id), 0);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -51,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (user) clearPrivateKey(user.id);
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
