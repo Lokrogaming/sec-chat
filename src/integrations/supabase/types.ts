@@ -225,14 +225,17 @@ export type Database = {
       conversations: {
         Row: {
           created_at: string
+          encryption_key: string | null
           id: string
         }
         Insert: {
           created_at?: string
+          encryption_key?: string | null
           id?: string
         }
         Update: {
           created_at?: string
+          encryption_key?: string | null
           id?: string
         }
         Relationships: []
