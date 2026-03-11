@@ -6,6 +6,7 @@ import ChatView from '@/components/ChatView';
 import ProfilePage from '@/pages/ProfilePage';
 import AnnouncementOverlay from '@/components/AnnouncementOverlay';
 import AppNavBar from '@/components/AppNavBar';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { Shield, Lock } from 'lucide-react';
 
 export default function ChatPage() {
