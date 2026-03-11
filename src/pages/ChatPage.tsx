@@ -38,9 +38,10 @@ export default function ChatPage() {
             setAddContactOpen={setAddContactOpen}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 pb-14 md:pb-0">
           <ProfilePage onBack={() => setShowProfile(false)} />
         </div>
+        <MobileBottomNav onOpenProfile={() => setShowProfile(true)} />
       </div>
     );
   }
