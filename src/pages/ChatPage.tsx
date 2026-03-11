@@ -55,7 +55,7 @@ export default function ChatPage() {
       </div>
 
       {/* Sidebar - hidden on mobile when conversation selected */}
-      <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : ''}`}>
+      <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : 'pb-14 md:pb-0'}`}>
         <ChatSidebar
           onSelectConversation={handleSelectConversation}
           selectedConversationId={selectedConversation}
@@ -102,6 +102,11 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile bottom nav - hidden when in a conversation on mobile */}
+      {!selectedConversation && (
+        <MobileBottomNav onOpenProfile={() => setShowProfile(true)} />
+      )}
     </div>
   );
 }
