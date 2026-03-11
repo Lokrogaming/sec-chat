@@ -6,6 +6,7 @@ import ChatView from '@/components/ChatView';
 import ProfilePage from '@/pages/ProfilePage';
 import AnnouncementOverlay from '@/components/AnnouncementOverlay';
 import AppNavBar from '@/components/AppNavBar';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { Shield, Lock } from 'lucide-react';
 
 export default function ChatPage() {
@@ -37,9 +38,10 @@ export default function ChatPage() {
             setAddContactOpen={setAddContactOpen}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 pb-14 md:pb-0">
           <ProfilePage onBack={() => setShowProfile(false)} />
         </div>
+        <MobileBottomNav onOpenProfile={() => setShowProfile(true)} />
       </div>
     );
   }
@@ -53,7 +55,7 @@ export default function ChatPage() {
       </div>
 
       {/* Sidebar - hidden on mobile when conversation selected */}
-      <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : ''}`}>
+      <div className={`w-full md:w-80 shrink-0 ${selectedConversation ? 'hidden md:block' : 'pb-14 md:pb-0'}`}>
         <ChatSidebar
           onSelectConversation={handleSelectConversation}
           selectedConversationId={selectedConversation}
@@ -100,6 +102,11 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile bottom nav - hidden when in a conversation on mobile */}
+      {!selectedConversation && (
+        <MobileBottomNav onOpenProfile={() => setShowProfile(true)} />
+      )}
     </div>
   );
 }
