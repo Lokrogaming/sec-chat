@@ -163,11 +163,8 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
         filter: `conversation_id=eq.${conversationId}`,
       }, async (payload) => {
         const msg = payload.new as Message;
-        try {
-          msg.decrypted = await decryptMessage(msg.encrypted_content, msg.iv, cryptoKey);
-        } catch {
-          msg.decrypted = '[Decryption failed]';
-        }
+        msg.decrypted = await decryptSafe(msg.encrypted_content, msg.iv, cryptoKey);
+
         // Check blacklist on received messages
         if (msg.decrypted && msg.sender_id !== user?.id) {
           const flaggedWord = checkBlacklist(msg.decrypted);
@@ -241,11 +238,8 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
 
     const decrypted = await Promise.all(
       (data || []).map(async (msg: any) => {
-        try {
-          msg.decrypted = await decryptMessage(msg.encrypted_content, msg.iv, cryptoKey);
-        } catch {
-          msg.decrypted = '[Decryption failed]';
-        }
+        msg.decrypted = await decryptSafe(msg.encrypted_content, msg.iv, cryptoKey);
+
         return msg;
       })
     );
@@ -275,7 +269,7 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
 
     setSending(true);
     try {
-      const { encrypted, iv } = await encryptMessage(text, cryptoKey);
+      const { encrypted, iv } = await encryptWith(text, cryptoKey);
       const { error } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
@@ -321,10 +315,11 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
               {isOnline ? 'Online' : 'Offline'}
             </span>
             <span className="text-muted-foreground/30">•</span>
-            <span className="flex items-center gap-1 text-primary/60">
-              <Lock className="h-3 w-3" />
-              AES-256-GCM
-            </span>
+            <EncryptionMenu
+              conversationId={conversationId}
+              cipher={cipherId}
+              onChanged={setCipherId}
+            />
           </div>
         </div>
       </div>
