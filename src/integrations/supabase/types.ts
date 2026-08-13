@@ -224,16 +224,19 @@ export type Database = {
       }
       conversations: {
         Row: {
+          cipher: string
           created_at: string
           encryption_key: string | null
           id: string
         }
         Insert: {
+          cipher?: string
           created_at?: string
           encryption_key?: string | null
           id?: string
         }
         Update: {
+          cipher?: string
           created_at?: string
           encryption_key?: string | null
           id?: string
@@ -373,6 +376,7 @@ export type Database = {
           id: string
           links: Json | null
           public_key: string | null
+          public_key_alg: string | null
           updated_at: string
           user_code: string
           user_id: string
@@ -385,6 +389,7 @@ export type Database = {
           id?: string
           links?: Json | null
           public_key?: string | null
+          public_key_alg?: string | null
           updated_at?: string
           user_code?: string
           user_id: string
@@ -397,6 +402,7 @@ export type Database = {
           id?: string
           links?: Json | null
           public_key?: string | null
+          public_key_alg?: string | null
           updated_at?: string
           user_code?: string
           user_id?: string
