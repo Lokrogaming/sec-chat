@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { encryptMessage, decryptMessage, deriveConversationKey } from '@/lib/crypto';
+import {
+  CipherId,
+  DEFAULT_CIPHER,
+  ResolvedCipher,
+  encryptWith,
+  decryptWith,
+  resolveCipher,
+} from '@/lib/ciphers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +16,7 @@ import { Send, Lock, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
 import TypingIndicator from '@/components/TypingIndicator';
+import EncryptionMenu from '@/components/EncryptionMenu';
 import { renderMarkdown } from '@/lib/markdown';
 import { loadBlacklist, checkBlacklist } from '@/lib/blacklist';
 
@@ -34,7 +42,9 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
+  const [cipherId, setCipherId] = useState<CipherId>(DEFAULT_CIPHER);
+  const [cryptoKey, setCryptoKey] = useState<ResolvedCipher | null>(null);
+  const fallbackRef = useRef<ResolvedCipher | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,9 +52,69 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   // Load blacklist on mount
   useEffect(() => { loadBlacklist(); }, []);
 
+  // Load the conversation's selected cipher and follow changes made by either side
   useEffect(() => {
-    deriveConversationKey(conversationId).then(setCryptoKey);
+    let active = true;
+    supabase
+      .from('conversations')
+      .select('cipher')
+      .eq('id', conversationId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setCipherId(((data?.cipher as CipherId) || DEFAULT_CIPHER));
+      });
+
+    const ch = supabase
+      .channel(`conversation-${conversationId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+        filter: `id=eq.${conversationId}`,
+      }, (payload) => {
+        const next = (payload.new as any)?.cipher as CipherId;
+        if (next) setCipherId(next);
+      })
+      .subscribe();
+
+    return () => { active = false; supabase.removeChannel(ch); };
   }, [conversationId]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setCryptoKey(null);
+    resolveCipher(DEFAULT_CIPHER, conversationId, { userId: user.id })
+      .then((c) => { fallbackRef.current = c; });
+    resolveCipher(cipherId, conversationId, { userId: user.id, otherUserId: otherUser?.user_id })
+      .then((c) => { if (active) setCryptoKey(c); })
+      .catch((err) => {
+        if (!active) return;
+        if (err?.message === 'PEER_KEY_MISSING') {
+          toast.error('The other person has not set up keys for this encryption yet.');
+        } else {
+          toast.error('Could not initialize encryption for this chat.');
+        }
+        resolveCipher(DEFAULT_CIPHER, conversationId, { userId: user.id }).then((c) => {
+          if (active) setCryptoKey(c);
+        });
+      });
+    return () => { active = false; };
+  }, [conversationId, cipherId, user, otherUser?.user_id]);
+
+  const decryptSafe = useCallback(async (content: string, iv: string, cipher: ResolvedCipher) => {
+    try {
+      return await decryptWith(content, iv, cipher);
+    } catch {
+      if (fallbackRef.current && fallbackRef.current.id !== cipher.id) {
+        try {
+          return await decryptWith(content, iv, fallbackRef.current);
+        } catch { /* ignore */ }
+      }
+      return '[Decryption failed]';
+    }
+  }, []);
+
 
   // Typing presence channel
   const typingChannelRef = useRef<any>(null);
