@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Save, Copy, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Camera, Save, Copy, Plus, Trash2, ArrowLeft, Link2, Check, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProfileData {
@@ -18,7 +18,7 @@ interface ProfileData {
 }
 
 export default function ProfilePage({ onBack }: { onBack: () => void }) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -26,6 +26,7 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -39,7 +40,7 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
       .eq('user_id', user!.id)
       .single();
     if (error) {
-      toast.error('Failed to load profile');
+      toast.error('We could not load your profile. Please try again.');
       return;
     }
     setProfile(data as any);
@@ -61,7 +62,7 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      toast.error('Failed to upload avatar');
+      toast.error('The photo could not be uploaded.');
       setUploading(false);
       return;
     }
@@ -78,7 +79,7 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
       .eq('user_id', user.id);
 
     setUploading(false);
-    toast.success('Avatar updated!');
+    toast.success('Your picture was updated.');
   };
 
   const saveProfile = async () => {
@@ -95,18 +96,18 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
       .eq('user_id', user.id);
 
     if (error) {
-      toast.error('Failed to save profile');
+      toast.error('Your changes could not be saved.');
     } else {
-      toast.success('Profile saved!');
+      toast.success('Your changes were saved.');
     }
     setSaving(false);
   };
 
-  const copyUserCode = () => {
-    if (profile?.user_code) {
-      navigator.clipboard.writeText(profile.user_code);
-      toast.success('User ID copied!');
-    }
+  const copy = (value: string, what: 'code' | 'link', message: string) => {
+    navigator.clipboard.writeText(value);
+    setCopied(what);
+    toast.success(message);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const addLink = () => setLinks([...links, { label: '', url: '' }]);
@@ -117,97 +118,135 @@ export default function ProfilePage({ onBack }: { onBack: () => void }) {
     setLinks(updated);
   };
 
-  if (!profile) return <div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>;
+  if (!profile) {
+    return <div className="flex h-full items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 border-b border-border p-4">
-        <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Go back" className="h-9 w-9 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h2 className="font-mono text-lg font-semibold text-foreground">Profile</h2>
+        <h2 className="font-mono text-base font-semibold text-foreground">Your profile</h2>
+        <Button
+          onClick={saveProfile}
+          disabled={saving}
+          size="sm"
+          className="ml-auto gradient-primary text-primary-foreground font-semibold hover:opacity-90"
+        >
+          <Save className="mr-1.5 h-4 w-4" />
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-6">
-        {/* Avatar */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative">
-            <Avatar className="h-24 w-24 border-2 border-primary/30">
-              <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback className="bg-secondary text-secondary-foreground text-2xl font-mono">
-                {displayName?.[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <label className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-80 transition-opacity">
-              <Camera className="h-4 w-4" />
-              <input type="file" accept="image/*" className="hidden" onChange={uploadAvatar} disabled={uploading} />
-            </label>
+      <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4">
+        {/* Identity card */}
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <Avatar className="h-16 w-16 border-2 border-primary/30">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="bg-secondary text-secondary-foreground text-xl font-mono">
+                  {displayName?.[0]?.toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-80 transition-opacity" title="Change your picture">
+                <Camera className="h-3.5 w-3.5" />
+                <span className="sr-only">Change your picture</span>
+                <input type="file" accept="image/*" className="hidden" onChange={uploadAvatar} disabled={uploading} />
+              </label>
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="display-name" className="text-xs text-muted-foreground">Your name</Label>
+              <Input
+                id="display-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="How should people see you?"
+                className="h-9 bg-input border-border"
+              />
+            </div>
           </div>
-          {uploading && <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>}
-        </div>
+          {uploading && <p className="mt-2 text-xs text-muted-foreground animate-pulse">Uploading your picture…</p>}
+        </section>
 
-        {/* User Code */}
-        <div className="rounded-lg border border-border bg-secondary/50 p-4 text-center">
-          <p className="text-xs text-muted-foreground mb-1">Your User ID</p>
-          <div className="flex items-center justify-center gap-2">
-            <code className="font-mono text-lg text-primary text-glow tracking-wider">
-              {profile.user_code}
-            </code>
-            <Button variant="ghost" size="icon" onClick={copyUserCode} className="text-muted-foreground hover:text-primary h-8 w-8">
-              <Copy className="h-4 w-4" />
+        {/* Sharing card */}
+        <section className="rounded-xl border border-border bg-secondary/40 p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Let others find you</h3>
+            <p className="text-xs text-muted-foreground">Share your personal code or your profile link, and people can start a chat with you.</p>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
+            <code className="font-mono text-base tracking-widest text-primary text-glow">{profile.user_code}</code>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => copy(profile.user_code, 'code', 'Your code was copied.')}
+              className="h-8 text-muted-foreground hover:text-primary"
+            >
+              {copied === 'code' ? <Check className="mr-1 h-4 w-4 text-primary" /> : <Copy className="mr-1 h-4 w-4" />}
+              Copy code
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Share this to let others add you</p>
           <Button
-            variant="link"
+            variant="outline"
             size="sm"
-            className="text-primary mt-1 h-auto p-0 text-xs"
-            onClick={() => {
-              const url = `${window.location.origin}/u/${profile.user_code}`;
-              navigator.clipboard.writeText(url);
-              toast.success('Profile link copied!');
-            }}
+            className="w-full"
+            onClick={() => copy(`${window.location.origin}/u/${profile.user_code}`, 'link', 'Your profile link was copied.')}
           >
-            Copy public profile link
+            {copied === 'link' ? <Check className="mr-2 h-4 w-4 text-primary" /> : <Link2 className="mr-2 h-4 w-4" />}
+            Copy profile link
           </Button>
-        </div>
+        </section>
 
-        {/* Display Name */}
-        <div className="space-y-2">
-          <Label className="text-secondary-foreground">Display Name</Label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="bg-input border-border" />
-        </div>
-
-        {/* Bio */}
-        <div className="space-y-2">
-          <Label className="text-secondary-foreground">Bio</Label>
-          <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className="bg-input border-border resize-none" placeholder="Tell people about yourself..." />
-        </div>
+        {/* About */}
+        <section className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <Label htmlFor="bio" className="text-sm font-semibold text-foreground">About you</Label>
+          <p className="text-xs text-muted-foreground">A short text that other people see on your profile.</p>
+          <Textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+            className="bg-input border-border resize-none"
+            placeholder="For example: Grandma of three, loves gardening."
+          />
+        </section>
 
         {/* Links */}
-        <div className="space-y-3">
+        <section className="rounded-xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-secondary-foreground">Links</Label>
-            <Button variant="ghost" size="sm" onClick={addLink} className="text-primary hover:text-primary/80 h-8">
-              <Plus className="h-4 w-4 mr-1" /> Add
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Your links</h3>
+              <p className="text-xs text-muted-foreground">Websites you want to show on your profile.</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={addLink} className="h-8 text-primary hover:text-primary/80">
+              <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
+          {links.length === 0 && <p className="text-xs text-muted-foreground">No links yet.</p>}
           {links.map((link, i) => (
             <div key={i} className="flex gap-2">
-              <Input value={link.label} onChange={(e) => updateLink(i, 'label', e.target.value)} placeholder="Label" className="bg-input border-border flex-1" />
-              <Input value={link.url} onChange={(e) => updateLink(i, 'url', e.target.value)} placeholder="https://..." className="bg-input border-border flex-[2]" />
-              <Button variant="ghost" size="icon" onClick={() => removeLink(i)} className="text-destructive hover:text-destructive/80 h-10 w-10 shrink-0">
+              <Input value={link.label} onChange={(e) => updateLink(i, 'label', e.target.value)} placeholder="Name" className="h-9 flex-1 bg-input border-border" />
+              <Input value={link.url} onChange={(e) => updateLink(i, 'url', e.target.value)} placeholder="https://…" className="h-9 flex-[2] bg-input border-border" />
+              <Button variant="ghost" size="icon" aria-label="Remove link" onClick={() => removeLink(i)} className="h-9 w-9 shrink-0 text-destructive hover:text-destructive/80">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* Save */}
-        <Button onClick={saveProfile} disabled={saving} className="w-full gradient-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity">
-          <Save className="mr-2 h-4 w-4" />
-          {saving ? 'Saving...' : 'Save Profile'}
-        </Button>
+        <div className="flex flex-col gap-2 pb-4 sm:flex-row">
+          <Button onClick={saveProfile} disabled={saving} className="flex-1 gradient-primary text-primary-foreground font-semibold hover:opacity-90">
+            <Save className="mr-2 h-4 w-4" />
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
+          <Button variant="outline" onClick={() => signOut()} className="sm:w-40">
+            <LogOut className="mr-2 h-4 w-4" /> Sign out
+          </Button>
+        </div>
       </div>
     </div>
   );
