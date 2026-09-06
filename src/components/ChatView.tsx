@@ -58,7 +58,10 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load blacklist on mount
-  useEffect(() => { loadBlacklist(); }, []);
+  useEffect(() => { loadBlacklist(); runImageCleanup(); }, []);
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load the conversation's selected cipher and follow changes made by either side
   useEffect(() => {
