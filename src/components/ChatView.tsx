@@ -338,11 +338,11 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border p-4">
+      <div className="flex items-center gap-2.5 border-b border-border px-3 py-2">
         <div className="relative">
-          <Avatar className="h-10 w-10 border border-primary/20">
+          <Avatar className="h-9 w-9 border border-primary/20">
             <AvatarImage src={otherUser?.avatar_url || undefined} />
-            <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
+            <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-xs">
               {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
             </AvatarFallback>
           </Avatar>
@@ -352,9 +352,9 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
             size="md"
           />
         </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-foreground">{otherUser?.display_name || 'Unknown'}</h3>
-          <div className="flex items-center gap-2 text-xs">
+        <div className="flex-1 min-w-0">
+          <h3 className="truncate text-sm font-semibold text-foreground">{otherUser?.display_name || 'Unknown'}</h3>
+          <div className="flex items-center gap-1.5 text-[11px]">
             <span className={isOnline ? 'text-primary' : 'text-muted-foreground'}>
               {isOnline ? 'Online' : 'Offline'}
             </span>
@@ -369,27 +369,32 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2 space-y-1.5">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             <div className="text-center">
-              <Lock className="h-8 w-8 mx-auto mb-2 text-primary/30" />
-              <p>Messages are end-to-end encrypted</p>
-              <p className="text-xs mt-1">Send the first message!</p>
+              <Lock className="h-7 w-7 mx-auto mb-2 text-primary/30" />
+              <p>Your messages are private and encrypted</p>
+              <p className="text-xs mt-1">Say hello to start the conversation.</p>
             </div>
           </div>
         )}
         {messages.map((msg) => {
           const isMine = msg.sender_id === user?.id;
+          const imagePath = msg.decrypted ? parseImageMessage(msg.decrypted) : null;
           return (
             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-              <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+              <div className={`max-w-[78%] rounded-2xl px-3 py-1.5 ${
                 isMine
                   ? 'bg-primary/15 border border-primary/20 text-foreground'
                   : 'bg-secondary border border-border text-foreground'
               }`}>
-                <p className="text-sm break-words">{msg.decrypted ? renderMarkdown(msg.decrypted) : '...'}</p>
-                <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : ''}`}>
+                {imagePath ? (
+                  <ChatImage path={imagePath} />
+                ) : (
+                  <p className="text-sm leading-snug break-words">{msg.decrypted ? renderMarkdown(msg.decrypted) : '...'}</p>
+                )}
+                <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
                   <p className={`text-[10px] ${isMine ? 'text-primary/50' : 'text-muted-foreground'}`}>
                     {formatTime(msg.created_at)}
                   </p>
@@ -408,23 +413,46 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
       </div>
 
       {/* Input */}
-      <form onSubmit={sendMessage} className="border-t border-border p-3 flex gap-2">
+      <form onSubmit={sendMessage} className="border-t border-border p-2 flex items-center gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePickImage}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          title="Send a photo (deleted after 7 days)"
+          aria-label="Send a photo"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingImage || !cryptoKey}
+          className="shrink-0 h-9 w-9 text-muted-foreground hover:text-primary"
+        >
+          {uploadingImage
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : <ImagePlus className="h-5 w-5" />}
+        </Button>
         <Input
           value={newMessage}
           onChange={(e) => { setNewMessage(e.target.value); broadcastTyping(); }}
-          placeholder="Type a message... (**bold**, *italic*, [link](url))"
-          className="flex-1 bg-input border-border"
+          placeholder="Write a message…"
+          className="flex-1 h-9 bg-input border-border"
           disabled={sending}
         />
         <Button
           type="submit"
           disabled={sending || !newMessage.trim()}
           size="icon"
-          className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+          aria-label="Send message"
+          className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0 h-9 w-9"
         >
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
     </div>
   );
 }
