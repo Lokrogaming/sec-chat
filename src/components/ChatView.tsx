@@ -297,10 +297,43 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
     }
   };
 
+  const handlePickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user || !cryptoKey) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a photo.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error('That photo is too large. Please pick one under 10 MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const path = await uploadChatImage(file, conversationId, user.id);
+      const { encrypted, iv } = await encryptWith(encodeImageMessage(path), cryptoKey);
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        encrypted_content: encrypted,
+        iv,
+      });
+      if (error) throw error;
+      toast.success('Photo sent. It will be deleted automatically in 7 days.');
+    } catch {
+      toast.error('Could not send the photo. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const formatTime = (ts: string) => {
     const d = new Date(ts);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
 
   return (
     <div className="flex flex-col h-full">
