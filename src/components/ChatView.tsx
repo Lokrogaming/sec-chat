@@ -12,13 +12,21 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Lock, Check, CheckCheck } from 'lucide-react';
+import { Send, Lock, Check, CheckCheck, ImagePlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PresenceDot from '@/components/PresenceDot';
 import TypingIndicator from '@/components/TypingIndicator';
 import EncryptionMenu from '@/components/EncryptionMenu';
+import ChatImage from '@/components/ChatImage';
 import { renderMarkdown } from '@/lib/markdown';
 import { loadBlacklist, checkBlacklist } from '@/lib/blacklist';
+import {
+  uploadChatImage,
+  encodeImageMessage,
+  parseImageMessage,
+  runImageCleanup,
+  MAX_IMAGE_BYTES,
+} from '@/lib/chatImages';
 
 interface Message {
   id: string;
