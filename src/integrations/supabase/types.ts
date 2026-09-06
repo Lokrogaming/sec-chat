@@ -107,6 +107,41 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_images: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          storage_path: string
+          uploader_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          storage_path: string
+          uploader_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          storage_path?: string
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_images_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_requests: {
         Row: {
           created_at: string
