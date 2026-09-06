@@ -307,6 +307,33 @@ export type Database = {
           },
         ]
       }
+      emojis: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          image_data: string
+          shortcode: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          image_data: string
+          shortcode: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          image_data?: string
+          shortcode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flagged_messages: {
         Row: {
           content: string
