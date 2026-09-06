@@ -256,8 +256,8 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
   return (
     <div className="flex flex-col h-full border-r border-border bg-card">
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
+      <div className="px-3 py-2.5 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             <h1 className="font-mono text-lg font-bold text-foreground">
@@ -303,8 +303,8 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="pl-9 bg-input border-border"
+              placeholder="Search your chats…"
+              className="h-9 pl-9 bg-input border-border"
             />
           </div>
           {totalUnread > 0 && (
@@ -323,7 +323,7 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
 
       {/* Contacts */}
       {contacts.length > 0 && (
-        <div className="p-3 border-b border-border">
+        <div className="px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2 mb-2 px-1">
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contacts</span>
@@ -333,7 +333,7 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
               <button
                 key={c.contact_user_id}
                 onClick={() => startConversation(c.contact_user_id)}
-                className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-secondary/50 transition-colors min-w-[60px]"
+                className="flex flex-col items-center gap-1 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors min-w-[56px]"
               >
                 <div className="relative">
                   <Avatar className="h-10 w-10 border border-primary/20">
@@ -361,8 +361,8 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
             <MessageSquarePlus className="h-10 w-10 mb-3 text-muted-foreground/30" />
-            <p className="text-sm text-center">No conversations yet</p>
-            <p className="text-xs text-center mt-1">Add a contact and start chatting!</p>
+            <p className="text-sm text-center">No chats yet</p>
+            <p className="text-xs text-center mt-1">Add someone with their code to start chatting.</p>
           </div>
         ) : (
           filteredConversations.map(conv => (
@@ -378,12 +378,12 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
                   .eq('conversation_id', conv.id)
                   .then(() => {});
               }}
-              className={`group w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors border-b border-border/50 ${
+              className={`group w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-secondary/50 transition-colors border-b border-border/50 ${
                 selectedConversationId === conv.id ? 'bg-secondary/70' : ''
               }`}
             >
               <div className="relative shrink-0">
-                <Avatar className="h-11 w-11 border border-primary/20">
+                <Avatar className="h-10 w-10 border border-primary/20">
                   <AvatarImage src={conv.otherUser.avatar_url || undefined} />
                   <AvatarFallback className="bg-secondary text-secondary-foreground font-mono text-sm">
                     {conv.otherUser.display_name?.[0]?.toUpperCase() || '?'}
@@ -395,7 +395,7 @@ export default function ChatSidebar({ onSelectConversation, selectedConversation
                 />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="font-medium text-foreground truncate">{conv.otherUser.display_name || 'Unknown'}</p>
+                <p className="text-sm font-medium text-foreground truncate">{conv.otherUser.display_name || 'Unknown'}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <LockKeyhole className="h-2.5 w-2.5" /> Encrypted
                 </p>
