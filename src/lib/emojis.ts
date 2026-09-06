@@ -16,16 +16,16 @@ const listeners = new Set<(list: CustomEmoji[]) => void>();
 export async function loadCustomEmojis(force = false): Promise<CustomEmoji[]> {
   if (cache && !force) return cache;
   if (inflight && !force) return inflight;
-  inflight = supabase
-    .from('emojis')
-    .select('id, shortcode, image_data')
-    .order('shortcode')
-    .then(({ data }) => {
-      cache = (data as CustomEmoji[]) || [];
-      listeners.forEach((l) => l(cache!));
-      inflight = null;
-      return cache;
-    });
+  inflight = (async () => {
+    const { data } = await supabase
+      .from('emojis')
+      .select('id, shortcode, image_data')
+      .order('shortcode');
+    cache = (data as CustomEmoji[]) || [];
+    listeners.forEach((l) => l(cache!));
+    inflight = null;
+    return cache;
+  })();
   return inflight;
 }
 
