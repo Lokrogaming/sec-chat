@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import EmojiPanel from '@/components/admin/EmojiPanel';
 
 interface UserProfile {
   user_id: string;
@@ -254,6 +255,7 @@ export default function AdminPage() {
             <TabsTrigger value="ips">IP Bans ({bannedIPs.length})</TabsTrigger>
             <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
             <TabsTrigger value="reports">Video Reports ({videoReports.length})</TabsTrigger>
+            <TabsTrigger value="emojis">Emojis</TabsTrigger>
           </TabsList>
 
           <TabsContent value="moderation" className="space-y-3">
@@ -500,6 +502,10 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </TabsContent>
+
+          <TabsContent value="emojis">
+            {user && <EmojiPanel userId={user.id} />}
           </TabsContent>
         </Tabs>
       </div>

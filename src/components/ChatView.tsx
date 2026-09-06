@@ -19,6 +19,8 @@ import TypingIndicator from '@/components/TypingIndicator';
 import EncryptionMenu from '@/components/EncryptionMenu';
 import ChatImage from '@/components/ChatImage';
 import { renderMarkdown } from '@/lib/markdown';
+import EmojiPicker from '@/components/EmojiPicker';
+import { loadCustomEmojis, subscribeCustomEmojis, emojiMapFrom, CustomEmoji } from '@/lib/emojis';
 import { loadBlacklist, checkBlacklist } from '@/lib/blacklist';
 import {
   uploadChatImage,
@@ -62,6 +64,8 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
+  const emojiMap = emojiMapFrom(customEmojis);
 
   // Load the conversation's selected cipher and follow changes made by either side
   useEffect(() => {
@@ -297,6 +301,12 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
     }
   };
 
+  useEffect(() => {
+    loadCustomEmojis().then(setCustomEmojis);
+    const unsub = subscribeCustomEmojis(setCustomEmojis);
+    return () => { unsub(); };
+  }, []);
+
   const handlePickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -392,7 +402,7 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
                 {imagePath ? (
                   <ChatImage path={imagePath} />
                 ) : (
-                  <p className="text-sm leading-snug break-words">{msg.decrypted ? renderMarkdown(msg.decrypted) : '...'}</p>
+                  <p className="text-sm leading-snug break-words">{msg.decrypted ? renderMarkdown(msg.decrypted, emojiMap) : '...'}</p>
                 )}
                 <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
                   <p className={`text-[10px] ${isMine ? 'text-primary/50' : 'text-muted-foreground'}`}>
@@ -435,6 +445,10 @@ export default function ChatView({ conversationId, otherUser, isOnline, onMessag
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : <ImagePlus className="h-5 w-5" />}
         </Button>
+        <EmojiPicker
+          disabled={sending}
+          onSelect={(t) => setNewMessage((m) => (m ? `${m}${m.endsWith(' ') ? '' : ' '}${t} ` : `${t} `))}
+        />
         <Input
           value={newMessage}
           onChange={(e) => { setNewMessage(e.target.value); broadcastTyping(); }}
