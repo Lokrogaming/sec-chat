@@ -15,7 +15,8 @@ export default function EmojiPicker({ onSelect, disabled }: Props) {
 
   useEffect(() => {
     loadCustomEmojis().then(setCustom);
-    return subscribeCustomEmojis(setCustom);
+    const unsub = subscribeCustomEmojis(setCustom);
+    return () => { unsub(); };
   }, []);
 
   const pick = (text: string) => {
